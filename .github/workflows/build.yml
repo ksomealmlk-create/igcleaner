@@ -14,9 +14,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.5
-      - run: unzip -o igcleaner-project.zip -d proj
-      - run: cd proj && gradle assembleDebug --no-daemon
+      - name: Build
+        run: |
+          unzip -o igcleaner-project.zip -d proj
+          ls -R proj | head -40
+          S=$(find proj -name settings.gradle | head -1)
+          if [ -z "$S" ]; then echo "settings.gradle NOT FOUND"; exit 1; fi
+          cd "$(dirname "$S")"
+          gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: InstaCleaner-APK
-          path: proj/app/build/outputs/apk/debug/*.apk
+          path: proj/**/build/outputs/apk/debug/*.apk
