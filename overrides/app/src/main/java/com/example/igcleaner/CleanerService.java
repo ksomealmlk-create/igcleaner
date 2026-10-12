@@ -167,9 +167,10 @@ public class CleanerService extends AccessibilityService {
         if (c == null) return false;
         String s = c.toString().trim();
         for (String w : words) if (s.equalsIgnoreCase(w)) return true;
-        // زر التأكيد بالأسفل: "حذف لديك (١)" / "Delete for you (1)"
-        String lower = s.toLowerCase();
-        if (s.startsWith("حذف لديك") || lower.startsWith("delete for you")) return true;
+        // "حذف لديك" أو "حذف لديك (١)" أو أي رقم (نشيل رموز الاتجاه المخفية)
+        String clean = s.replaceAll("[\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069\\u00a0]", "").trim();
+        if (clean.length() <= 30
+                && (clean.contains("حذف لديك") || clean.toLowerCase().contains("delete for you"))) return true;
         return false;
     }
 
