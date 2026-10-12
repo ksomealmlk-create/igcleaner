@@ -35,7 +35,7 @@ public class CleanerService extends AccessibilityService {
         @Override public void run() {
             if (!running) return;
             try { step(); } catch (Exception ignored) {}
-            h.postDelayed(this, 1000); // التأخير بين كل خطوة
+            h.postDelayed(this, 500); // التأخير بين كل خطوة
         }
     };
 
@@ -69,6 +69,7 @@ public class CleanerService extends AccessibilityService {
     }
 
     void step() {
+        if (android.os.SystemClock.uptimeMillis() < gestureUntil) return; // الضغطة المطولة لسا شغالة
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
         if (!"com.instagram.android".equals(String.valueOf(root.getPackageName()))) return;
@@ -166,6 +167,9 @@ public class CleanerService extends AccessibilityService {
         if (c == null) return false;
         String s = c.toString().trim();
         for (String w : words) if (s.equalsIgnoreCase(w)) return true;
+        // زر التأكيد بالأسفل: "حذف لديك (١)" / "Delete for you (1)"
+        String lower = s.toLowerCase();
+        if (s.startsWith("حذف لديك") || lower.startsWith("delete for you")) return true;
         return false;
     }
 
@@ -198,7 +202,12 @@ public class CleanerService extends AccessibilityService {
         gesture(r.centerX(), r.centerY(), 50);
     }
 
-    void longPress(int x, int y) { gesture(x, y, 700); }
+    long gestureUntil = 0;
+
+    void longPress(int x, int y) {
+        gestureUntil = android.os.SystemClock.uptimeMillis() + 600;
+        gesture(x, y, 550);
+    }
 
     void gesture(int x, int y, long dur) {
         Path p = new Path();
