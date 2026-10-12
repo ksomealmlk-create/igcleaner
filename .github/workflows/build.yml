@@ -16,11 +16,13 @@ jobs:
           gradle-version: 8.5
       - name: Build
         run: |
+          ROOT=$PWD
           unzip -o igcleaner-project-1.zip -d proj
-          ls -R proj | head -40
           S=$(find proj -name settings.gradle | head -1)
           if [ -z "$S" ]; then echo "settings.gradle NOT FOUND"; exit 1; fi
-          cd "$(dirname "$S")"
+          D=$(dirname "$S")
+          if [ -d "$ROOT/overrides" ]; then cp -r "$ROOT/overrides/." "$D/"; fi
+          cd "$D"
           gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
