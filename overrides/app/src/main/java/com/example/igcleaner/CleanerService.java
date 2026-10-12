@@ -29,13 +29,13 @@ public class CleanerService extends AccessibilityService {
     int screenW, screenH;
 
     // الكلمات اللي يضغطها (القائمة + التأكيد + نافذة "موافق")
-    static final String[] UNSEND = {"Unsend", "إلغاء الإرسال", "إلغاء إرسال", "Unsend message", "موافق", "OK"};
+    static final String[] UNSEND = {"Unsend", "إلغاء الإرسال", "إلغاء إرسال", "Unsend message", "موافق", "OK", "حذف لديك", "Delete for you", "Remove for you"};
 
     final Runnable tick = new Runnable() {
         @Override public void run() {
             if (!running) return;
             try { step(); } catch (Exception ignored) {}
-            h.postDelayed(this, 2000); // التأخير بين كل خطوة
+            h.postDelayed(this, 1000); // التأخير بين كل خطوة
         }
     };
 
