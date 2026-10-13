@@ -30,8 +30,10 @@ public class CleanerService extends AccessibilityService {
     final Handler h = new Handler(Looper.getMainLooper());
     int misses = 0;
     int screenW, screenH;
-    long nextDelay = 2000;
+    long nextDelay = 670;
     String lastSig = "";
+    int phase = 0;               // 0 = طلوع للرسايل القديمة، 1 = نزول للتأكد
+    boolean deletedInDown = false;
     ArrayList<String> pendingKeys = null;
     final HashMap<String, Integer> fails = new HashMap<>();
     final ArrayList<AccessibilityNodeInfo> cands = new ArrayList<>();
@@ -43,7 +45,7 @@ public class CleanerService extends AccessibilityService {
     final Runnable tick = new Runnable() {
         @Override public void run() {
             if (!running) return;
-            nextDelay = 2000;
+            nextDelay = 670;
             try { step(); } catch (Exception ignored) {}
             h.postDelayed(this, nextDelay);
         }
@@ -57,6 +59,8 @@ public class CleanerService extends AccessibilityService {
         s.fails.clear();
         s.pendingKeys = null;
         s.lastSig = "";
+        s.phase = 0;
+        s.deletedInDown = false;
         running = true;
         s.h.removeCallbacks(s.tick);
         s.h.postDelayed(s.tick, delay);
@@ -107,7 +111,7 @@ public class CleanerService extends AccessibilityService {
             clickNode(u);
             pendingKeys = null;
             misses = 0;
-            nextDelay = 1200;
+            nextDelay = 400;
             return;
         }
 
@@ -152,21 +156,48 @@ public class CleanerService extends AccessibilityService {
             Integer f = fails.get(pickKey);
             int x = (f == null || f == 0) ? pr.centerX() : pr.left + (int) (pr.width() * 0.2f);
             longPress(x, pr.centerY());
+            if (phase == 1) deletedInDown = true;
             misses = 0;
             return;
         }
 
-        // 3) ما بقى شي بهاي الصفحة: قلبة سريعة للرسايل القديمة
+        // 3) ما بقى شي بهاي الصفحة
         String s = sig.toString();
         if (s.equals(lastSig)) misses++; else misses = 0;
         lastSig = s;
-        AccessibilityNodeInfo sc = findScrollable(root);
-        if (sc != null) sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
-        else swipeDown(0.25f, 0.75f, 200);
-        nextDelay = misses > 0 ? 1200 : 600;
-        if (misses >= 5) {
-            running = false;
-            Toast.makeText(this, "خلص أو ما لقيت رسائل", Toast.LENGTH_LONG).show();
+
+        if (phase == 0) {
+            // طلوع للرسايل القديمة
+            AccessibilityNodeInfo sc = findScrollable(root);
+            if (sc != null) sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
+            else swipeDown(0.25f, 0.75f, 150);
+            nextDelay = misses > 0 ? 400 : 200;
+            if (misses >= 8) {
+                // وصلنا نهاية المحادثة (أقدم رسالة): ابدأ النزول شويه شويه
+                phase = 1;
+                misses = 0;
+                lastSig = "";
+                deletedInDown = false;
+                nextDelay = 600;
+                Toast.makeText(this, "وصلت النهاية، ينزل يتأكد", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            // نزول شويه شويه للتأكد
+            swipeUp(0.62f, 0.40f, 350);
+            nextDelay = 700;
+            if (misses >= 3) {
+                if (deletedInDown) {
+                    // لقى رسايل بالنزول: ارجع اطلع وافحص من جديد
+                    phase = 0;
+                    misses = 0;
+                    lastSig = "";
+                    deletedInDown = false;
+                    nextDelay = 600;
+                } else {
+                    running = false;
+                    Toast.makeText(this, "تأكدت: كل الرسائل انحذفت", Toast.LENGTH_LONG).show();
+                }
+            }
         }
     }
 
@@ -258,7 +289,7 @@ public class CleanerService extends AccessibilityService {
         gesture(r.centerX(), r.centerY(), 50);
     }
 
-    void longPress(int x, int y) { gesture(x, y, 700); }
+    void longPress(int x, int y) { gesture(x, y, 550); }
 
     void gesture(int x, int y, long dur) {
         Path p = new Path();
@@ -270,6 +301,16 @@ public class CleanerService extends AccessibilityService {
 
     // سحبة للأسفل = الرسايل تصعد (القديمة تبين)
     void swipeDown(float from, float to, long dur) {
+        Path p = new Path();
+        p.moveTo(screenW / 2f, screenH * from);
+        p.lineTo(screenW / 2f, screenH * to);
+        GestureDescription.Builder b = new GestureDescription.Builder();
+        b.addStroke(new GestureDescription.StrokeDescription(p, 0, dur));
+        dispatchGesture(b.build(), null, null);
+    }
+
+    // سحبة للأعلى = الرسايل تنزل (الجديدة تبين)، حركة صغيرة وبطيئة
+    void swipeUp(float from, float to, long dur) {
         Path p = new Path();
         p.moveTo(screenW / 2f, screenH * from);
         p.lineTo(screenW / 2f, screenH * to);
