@@ -31,7 +31,6 @@ public class CleanerService extends AccessibilityService {
     int misses = 0;
     int screenW, screenH;
     long nextDelay = 2000;
-    boolean needSmallScroll = false;
     String lastSig = "";
     ArrayList<String> pendingKeys = null;
     final HashMap<String, Integer> fails = new HashMap<>();
@@ -57,7 +56,6 @@ public class CleanerService extends AccessibilityService {
         s.misses = 0;
         s.fails.clear();
         s.pendingKeys = null;
-        s.needSmallScroll = false;
         s.lastSig = "";
         running = true;
         s.h.removeCallbacks(s.tick);
@@ -108,7 +106,6 @@ public class CleanerService extends AccessibilityService {
         if (u != null) {
             clickNode(u);
             pendingKeys = null;
-            needSmallScroll = true;
             misses = 0;
             nextDelay = 1200;
             return;
@@ -117,15 +114,7 @@ public class CleanerService extends AccessibilityService {
         // ضغطنا على رسالة وما طلعت قائمة: سجّل فشل
         registerFail();
 
-        // 2) بعد كل حذف: اصعد شوية
-        if (needSmallScroll) {
-            needSmallScroll = false;
-            swipeDown(0.40f, 0.55f, 250);
-            nextDelay = 900;
-            return;
-        }
-
-        // 3) دور على آخر رسالة (أي نوع)
+        // 2) دور على آخر رسالة (أي نوع)
         cands.clear();
         scanOwn(root);
         StringBuilder sig = new StringBuilder();
@@ -167,7 +156,7 @@ public class CleanerService extends AccessibilityService {
             return;
         }
 
-        // 4) ما بقى شي بهاي الصفحة: قلبة سريعة للرسايل القديمة
+        // 3) ما بقى شي بهاي الصفحة: قلبة سريعة للرسايل القديمة
         String s = sig.toString();
         if (s.equals(lastSig)) misses++; else misses = 0;
         lastSig = s;
