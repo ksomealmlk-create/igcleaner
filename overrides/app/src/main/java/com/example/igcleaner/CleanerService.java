@@ -32,8 +32,7 @@ public class CleanerService extends AccessibilityService {
     int screenW, screenH;
     long nextDelay = 900;
     String lastSig = "";
-    int phase = 0;               // 0 = طلوع للرسايل القديمة، 1 = نزول كامل للتأكد
-    boolean deletedInDown = false;
+    int phase = 0;               // 0 = طلوع للرسايل القديمة، 1 = نزول كامل للنهاية
     ArrayList<String> pendingKeys = null;
     final HashMap<String, Integer> fails = new HashMap<>();
     final ArrayList<AccessibilityNodeInfo> cands = new ArrayList<>();
@@ -60,7 +59,6 @@ public class CleanerService extends AccessibilityService {
         s.pendingKeys = null;
         s.lastSig = "";
         s.phase = 0;
-        s.deletedInDown = false;
         running = true;
         s.h.removeCallbacks(s.tick);
         s.h.postDelayed(s.tick, delay);
@@ -156,12 +154,11 @@ public class CleanerService extends AccessibilityService {
             Integer f = fails.get(pickKey);
             int x = (f == null || f == 0) ? pr.centerX() : pr.left + (int) (pr.width() * 0.2f);
             longPress(x, pr.centerY());
-            if (phase == 1) deletedInDown = true;
             misses = 0;
             return;
         }
 
-        // 3) ما بقى شي بهاي الصفحة
+        // 3) ما بقى شي بهاي الشاشة
         String s = sig.toString();
         if (s.equals(lastSig)) misses++; else misses = 0;
         lastSig = s;
@@ -177,26 +174,17 @@ public class CleanerService extends AccessibilityService {
                 phase = 1;
                 misses = 0;
                 lastSig = "";
-                deletedInDown = false;
                 nextDelay = 800;
                 Toast.makeText(this, "وصلت النهاية، ينزل يتأكد", Toast.LENGTH_SHORT).show();
             }
         } else {
-            // نزول شويه شويه، ما يوقف إلا إذا الشاشة ما تتغير (وصل لآخر المحادثة)
+            // نزول شويه شويه: إذا لقى رسالة يمسحها (فوق) ويكمل نزول
+            // ما يوقف إلا إذا وصل لآخر المحادثة (الشاشة ما تتغير)
             swipeUp(0.62f, 0.40f, 400);
             nextDelay = 900;
             if (misses >= 4) {
-                if (deletedInDown) {
-                    // لقى رسايل بالنزول: ارجع اطلع وافحص من جديد
-                    phase = 0;
-                    misses = 0;
-                    lastSig = "";
-                    deletedInDown = false;
-                    nextDelay = 800;
-                } else {
-                    running = false;
-                    Toast.makeText(this, "تأكدت: كل الرسائل انحذفت", Toast.LENGTH_LONG).show();
-                }
+                running = false;
+                Toast.makeText(this, "وصلت آخر المحادثة، كل الرسائل انحذفت", Toast.LENGTH_LONG).show();
             }
         }
     }
