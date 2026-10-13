@@ -30,9 +30,9 @@ public class CleanerService extends AccessibilityService {
     final Handler h = new Handler(Looper.getMainLooper());
     int misses = 0;
     int screenW, screenH;
-    long nextDelay = 670;
+    long nextDelay = 900;
     String lastSig = "";
-    int phase = 0;               // 0 = طلوع للرسايل القديمة، 1 = نزول للتأكد
+    int phase = 0;               // 0 = طلوع للرسايل القديمة، 1 = نزول كامل للتأكد
     boolean deletedInDown = false;
     ArrayList<String> pendingKeys = null;
     final HashMap<String, Integer> fails = new HashMap<>();
@@ -45,7 +45,7 @@ public class CleanerService extends AccessibilityService {
     final Runnable tick = new Runnable() {
         @Override public void run() {
             if (!running) return;
-            nextDelay = 670;
+            nextDelay = 900;
             try { step(); } catch (Exception ignored) {}
             h.postDelayed(this, nextDelay);
         }
@@ -111,7 +111,7 @@ public class CleanerService extends AccessibilityService {
             clickNode(u);
             pendingKeys = null;
             misses = 0;
-            nextDelay = 400;
+            nextDelay = 550;
             return;
         }
 
@@ -170,29 +170,29 @@ public class CleanerService extends AccessibilityService {
             // طلوع للرسايل القديمة
             AccessibilityNodeInfo sc = findScrollable(root);
             if (sc != null) sc.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
-            else swipeDown(0.25f, 0.75f, 150);
-            nextDelay = misses > 0 ? 400 : 200;
+            else swipeDown(0.25f, 0.75f, 180);
+            nextDelay = misses > 0 ? 550 : 280;
             if (misses >= 8) {
-                // وصلنا نهاية المحادثة (أقدم رسالة): ابدأ النزول شويه شويه
+                // وصلنا أقدم رسالة: ابدأ النزول الكامل
                 phase = 1;
                 misses = 0;
                 lastSig = "";
                 deletedInDown = false;
-                nextDelay = 600;
+                nextDelay = 800;
                 Toast.makeText(this, "وصلت النهاية، ينزل يتأكد", Toast.LENGTH_SHORT).show();
             }
         } else {
-            // نزول شويه شويه للتأكد
-            swipeUp(0.62f, 0.40f, 350);
-            nextDelay = 700;
-            if (misses >= 3) {
+            // نزول شويه شويه، ما يوقف إلا إذا الشاشة ما تتغير (وصل لآخر المحادثة)
+            swipeUp(0.62f, 0.40f, 400);
+            nextDelay = 900;
+            if (misses >= 4) {
                 if (deletedInDown) {
                     // لقى رسايل بالنزول: ارجع اطلع وافحص من جديد
                     phase = 0;
                     misses = 0;
                     lastSig = "";
                     deletedInDown = false;
-                    nextDelay = 600;
+                    nextDelay = 800;
                 } else {
                     running = false;
                     Toast.makeText(this, "تأكدت: كل الرسائل انحذفت", Toast.LENGTH_LONG).show();
@@ -289,7 +289,7 @@ public class CleanerService extends AccessibilityService {
         gesture(r.centerX(), r.centerY(), 50);
     }
 
-    void longPress(int x, int y) { gesture(x, y, 550); }
+    void longPress(int x, int y) { gesture(x, y, 650); }
 
     void gesture(int x, int y, long dur) {
         Path p = new Path();
@@ -309,7 +309,7 @@ public class CleanerService extends AccessibilityService {
         dispatchGesture(b.build(), null, null);
     }
 
-    // سحبة للأعلى = الرسايل تنزل (الجديدة تبين)، حركة صغيرة وبطيئة
+    // سحبة للأعلى = الرسايل تنزل (الجديدة تبين)
     void swipeUp(float from, float to, long dur) {
         Path p = new Path();
         p.moveTo(screenW / 2f, screenH * from);
